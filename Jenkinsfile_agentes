@@ -1,4 +1,4 @@
-pipeline {
+groovypipeline {
     agent none
     environment {
         PRODUCTION_STACK = "todo-list-aws-production"
@@ -62,7 +62,9 @@ pipeline {
     }
     post {
         always {
-            cleanWs()
+            node('built-in') {
+                cleanWs()
+            }
         }
         success {
             echo "Pipeline CD con agentes completado exitosamente"
