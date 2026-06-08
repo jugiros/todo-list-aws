@@ -1,0 +1,80 @@
+pipeline {
+    agent none
+
+    environment {
+        PRODUCTION_STACK = "todo-list-aws-production"
+        REGION           = "us-east-1"
+    }
+
+    stages {
+
+        stage('Get Code') {
+            agent any
+            steps {
+                git branch: 'master',
+                    url: 'https://github.com/jugiros/todo-list-aws'
+                echo "Codigo descargado de rama master"
+                sh 'whoami'
+                sh 'hostname'
+                stash name: 'code', includes: '**/*'
+            }
+        }
+
+        stage('Deploy') {
+            agent any
+            steps {
+                unstash 'code'
+                sh 'whoami'
+                sh 'hostname'
+                sh '''
+                    sam build
+                    sam deploy \
+                        --config-env production \
+                        --no-confirm-changeset \
+                        --no-fail-on-empty-changeset
+                '''
+                script {
+                    env.BASE_URL = sh(
+                        script: """
+                            aws cloudformation describe-stacks \
+                                --stack-name ${PRODUCTION_STACK} \
+                                --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' \
+                                --region ${REGION} \
+                                --output text
+                        """,
+                        returnStdout: true
+                    ).trim()
+                    echo "BASE_URL obtenida: ${env.BASE_URL}"
+                    writeFile file: 'base_url.txt', text: env.BASE_URL
+                    stash name: 'base-url', includes: 'base_url.txt'
+                }
+            }
+        }
+
+        stage('Rest Test') {
+            agent { label 'agente2' }
+            steps {
+                unstash 'base-url'
+                sh 'whoami'
+                sh 'hostname'
+                script {
+                    env.BASE_URL = readFile('base_url.txt').trim()
+                }
+                sh "echo 'Ejecutando pytest contra: ${env.BASE_URL}'"
+                sh "python3 -m pytest test/integration/todoApiTest.py -v --tb=short -k 'test_api_listtodos or test_api_gettodo'"
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "Pipeline CD con agentes completado exitosamente"
+        }
+        failure {
+            echo "Pipeline CD con agentes fallo - revisar logs"
+        }
+    }
+}
