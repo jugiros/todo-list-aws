@@ -9,7 +9,12 @@ region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Stage=\"default\""
 image_repositories = []
+resolve_s3 = true
+confirm_changeset = true
 
+
+[default.global.parameters]
+region = "us-east-1"
 [staging]
 [staging.deploy]
 [staging.deploy.parameters]
