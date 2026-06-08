@@ -13,6 +13,12 @@ pipeline {
                 git branch: 'develop',
                     url: 'https://github.com/jugiros/todo-list-aws'
                 echo "Codigo descargado de rama develop"
+                sh '''
+                    curl -o samconfig.toml \
+                        https://raw.githubusercontent.com/jugiros/todo-list-aws-config/staging/samconfig.toml
+                    echo "samconfig.toml descargado de rama staging"
+                    cat samconfig.toml
+                '''
             }
         }
 
@@ -92,8 +98,11 @@ pipeline {
                         git config user.name "jugiros"
                         git remote set-url origin https://${GIT_TOKEN}@github.com/jugiros/todo-list-aws.git
                         git fetch origin
+                        git checkout master
+                        git merge origin/develop --no-edit --strategy-option=theirs || true
                         git checkout master -- Jenkinsfile
-                        git merge develop --no-edit
+                        git checkout master -- Jenkinsfile_agentes
+                        git commit -m "chore: keep master Jenkinsfiles after merge" || true
                         git push origin master
                     '''
                 }
