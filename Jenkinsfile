@@ -92,7 +92,7 @@ pipeline {
                         git config user.name "jugiros"
                         git remote set-url origin https://${GIT_TOKEN}@github.com/jugiros/todo-list-aws.git
                         git fetch origin
-                        git checkout master
+                        git checkout master -- Jenkinsfile
                         git merge develop --no-edit
                         git push origin master
                     '''
